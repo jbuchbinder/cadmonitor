@@ -52,20 +52,29 @@ func (c *CadBrowser) Login(user, pass string) error {
 	return nil
 }
 
-func (c *CadBrowser) GetActiveCalls() error {
+func (c *CadBrowser) GetActiveCalls() ([]string, error) {
+	calls := make([]string, 0)
+
 	if !c.initialized {
-		return errors.New("Not initialized")
+		return calls, errors.New("Not initialized")
 	}
 
-	// div.ctl00_content_uxCallGrid div.Body a
-
-	return nil
-}
-
-func (c *CadBrowser) GetStatus(url string) (map[string]string, error) {
 	b := c.browserObject
 
-	ret := map[string]string{}
+	// Return to main status screen
+	b.OpenBookmark("main")
+
+	b.Dom().Find("div.ctl00_content_uxCallGrid div.Body a").Each(func(_ int, s *goquery.Selection) {
+
+	})
+
+	return calls, nil
+}
+
+func (c *CadBrowser) GetStatus(url string) (map[string]UnitStatus, error) {
+	b := c.browserObject
+
+	ret := map[string]UnitStatus{}
 
 	err := b.Open(url)
 	if err != nil {
@@ -77,6 +86,9 @@ func (c *CadBrowser) GetStatus(url string) (map[string]string, error) {
 
 		unit := ""
 		status := ""
+		dispatchTime := ""
+		enrouteTime := ""
+		arrivedTime := ""
 
 		s.Find("td").Each(func(_ int, inner *goquery.Selection) {
 			cl, _ := inner.Attr("class")
@@ -88,11 +100,27 @@ func (c *CadBrowser) GetStatus(url string) (map[string]string, error) {
 				break
 			case "Key_Status":
 				status = content
+				break
+			case "Key_DispatchTime DateTime":
+				dispatchTime = content
+				break
+			case "Key_EnRouteTime DateTime":
+				enrouteTime = content
+				break
+			case "Key_ArrivedTime DateTime":
+				arrivedTime = content
+				break
 			default:
 			}
 		})
 
-		ret[unit] = status
+		ret[unit] = UnitStatus{
+			Unit:         unit,
+			Status:       status,
+			DispatchTime: dispatchTime,
+			EnRouteTime:  enrouteTime,
+			ArrivedTime:  arrivedTime,
+		}
 	})
 
 	// div#ctl00_content_uxUnitsGrid div.Body table tbody tr
