@@ -4,7 +4,7 @@
 
 ## Development
 
-The default {{secrets.go}} file is encrypted by the developer, but you can create your own like this:
+The default `secrets.go` file is encrypted by the developer, but you can create your own like this:
 
 	package main
 	
