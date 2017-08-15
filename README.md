@@ -1,5 +1,8 @@
 # QVEC CAD MONITOR
 
+[![Build Status](https://secure.travis-ci.org/jbuchbinder/qveccadmonitor.png)](http://travis-ci.org/jbuchbinder/qveccadmonitor)
+
+
 [QVEC](http://qvec.org) CAD system monitor for apparatuses
 
 ## Development
