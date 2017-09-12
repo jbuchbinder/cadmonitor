@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	//"fmt"
+	"time"
+
 	"github.com/PuerkitoBio/goquery"
 	"github.com/headzoo/surf"
 	"github.com/headzoo/surf/agent"
@@ -71,15 +73,46 @@ func (c *CadBrowser) GetActiveCalls() ([]string, error) {
 	return calls, nil
 }
 
-func (c *CadBrowser) GetStatus(url string) (map[string]UnitStatus, error) {
+func (c *CadBrowser) GetStatus(url string) (CallStatus, error) {
 	b := c.browserObject
 
-	ret := map[string]UnitStatus{}
+	ret := CallStatus{}
+	ret.Units = map[string]UnitStatus{}
+	ret.Narratives = make([]Narrative, 0)
 
 	err := b.Open(url)
 	if err != nil {
 		return ret, err
 	}
+
+	b.Dom().Find("div#ctl00_content_uxNarrativesGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
+		var nRecordedTime time.Time
+		nMessage := ""
+		nUser := ""
+
+		s.Find("td").Each(func(_ int, inner *goquery.Selection) {
+			cl, _ := inner.Attr("class")
+			content := inner.Find("a").Text()
+			switch cl {
+			case "Key_DateTime DateTime":
+				nRecordedTime = dateTime(content)
+				break
+			case "Key_Narrative":
+				nMessage = content
+				break
+			case "Key_UserName":
+				nUser = content
+				break
+			default:
+			}
+		})
+
+		ret.Narratives = append(ret.Narratives, Narrative{
+			RecordedTime: nRecordedTime,
+			Message:      nMessage,
+			User:         nUser,
+		})
+	})
 
 	b.Dom().Find("div#ctl00_content_uxUnitsGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
 		//fmt.Println("Found unit row")
@@ -114,7 +147,7 @@ func (c *CadBrowser) GetStatus(url string) (map[string]UnitStatus, error) {
 			}
 		})
 
-		ret[unit] = UnitStatus{
+		ret.Units[unit] = UnitStatus{
 			Unit:         unit,
 			Status:       status,
 			DispatchTime: dispatchTime,
