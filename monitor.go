@@ -67,7 +67,10 @@ func (c *CadBrowser) GetActiveCalls() ([]string, error) {
 	b.OpenBookmark("main")
 
 	b.Dom().Find("div.ctl00_content_uxCallGrid div.Body a").Each(func(_ int, s *goquery.Selection) {
-
+		x, exists := s.Attr("href")
+		if exists {
+			calls = append(calls, x)
+		}
 	})
 
 	return calls, nil

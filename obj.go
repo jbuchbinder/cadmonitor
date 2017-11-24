@@ -5,20 +5,20 @@ import (
 )
 
 type UnitStatus struct {
-	Unit         string
-	Status       string
-	DispatchTime string
-	EnRouteTime  string
-	ArrivedTime  string
+	Unit         string `json:"unit"`
+	Status       string `json:"status"`
+	DispatchTime string `json:"dispatch_time"`
+	EnRouteTime  string `json:"enroute_time"`
+	ArrivedTime  string `json:"arrived_time"`
 }
 
 type Narrative struct {
-	RecordedTime time.Time
-	Message      string
-	User         string
+	RecordedTime time.Time `json:"recorded_time"`
+	Message      string    `json:"message"`
+	User         string    `json:"user"`
 }
 
 type CallStatus struct {
-	Narratives []Narrative
-	Units      map[string]UnitStatus
+	Narratives []Narrative           `json:"narratives"`
+	Units      map[string]UnitStatus `json:"units"`
 }
