@@ -3,6 +3,7 @@ package monitor
 import (
 	//"fmt"
 
+	"strconv"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -89,6 +90,33 @@ func (c *CadBrowser) GetStatus(url string) (CallStatus, error) {
 		return ret, err
 	}
 
+	b.Dom().Find("table#ctl00_content_uxCallDetail tr td table tr td").Each(func(_ int, s *goquery.Selection) {
+		var content string
+		s.Find("span").Each(func(_ int, inner *goquery.Selection) {
+			content = inner.Text()
+		})
+		s.Find("b").Each(func(_ int, inner *goquery.Selection) {
+			switch inner.Text() {
+			case "Priority: ":
+				ret.Priority, _ = strconv.Atoi(content)
+				break
+			case "Call Type: ":
+				ret.CallType = content
+				break
+			case "Nature of Call: ":
+				ret.NatureOfCall = content
+				break
+			case "Location: ":
+				ret.Location = content
+				break
+			case "Cross Streets: ":
+				ret.CrossStreets = content
+				break
+			default:
+			}
+		})
+	})
+
 	b.Dom().Find("div#ctl00_content_uxNarrativesGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
 		var nRecordedTime time.Time
 		nMessage := ""
@@ -126,6 +154,7 @@ func (c *CadBrowser) GetStatus(url string) (CallStatus, error) {
 		dispatchTime := ""
 		enrouteTime := ""
 		arrivedTime := ""
+		clearedTime := ""
 
 		s.Find("td").Each(func(_ int, inner *goquery.Selection) {
 			cl, _ := inner.Attr("class")
@@ -147,6 +176,9 @@ func (c *CadBrowser) GetStatus(url string) (CallStatus, error) {
 			case "Key_ArrivedTime DateTime":
 				arrivedTime = content
 				break
+			case "Key_ClearedTime DateTime":
+				clearedTime = content
+				break
 			default:
 			}
 		})
@@ -157,6 +189,7 @@ func (c *CadBrowser) GetStatus(url string) (CallStatus, error) {
 			DispatchTime: dispatchTime,
 			EnRouteTime:  enrouteTime,
 			ArrivedTime:  arrivedTime,
+			ClearedTime:  clearedTime,
 		}
 	})
 

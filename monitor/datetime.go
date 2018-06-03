@@ -9,6 +9,10 @@ const (
 	DATE_LAYOUT = "01/02/2006 15:04:05"
 )
 
+func CadDateTime(orig string) time.Time {
+	return dateTime(orig)
+}
+
 func dateTime(orig string) time.Time {
 	t, _ := time.Parse(DATE_LAYOUT, orig)
 	return t
