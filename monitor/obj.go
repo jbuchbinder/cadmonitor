@@ -1,7 +1,11 @@
-package main
+package monitor
 
 import (
 	"time"
+)
+
+const (
+	URLPREFIX = "http://cadview.qvec.org/NewWorld.CAD.ViewOnly/"
 )
 
 type UnitStatus struct {

@@ -1,14 +1,15 @@
-package main
+package monitor
 
 import (
-	"errors"
 	//"fmt"
+
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/headzoo/surf"
 	"github.com/headzoo/surf/agent"
 	"github.com/headzoo/surf/browser"
+	"github.com/pkg/errors"
 )
 
 type CadBrowser struct {
@@ -46,7 +47,7 @@ func (c *CadBrowser) Login(user, pass string) error {
 
 	err = b.Bookmark("main")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to bookmark main")
 	}
 
 	c.initialized = true
@@ -64,7 +65,7 @@ func (c *CadBrowser) GetActiveCalls() ([]string, error) {
 	b := c.browserObject
 
 	// Return to main status screen
-	b.OpenBookmark("main")
+	b.Open("http://cadview.qvec.org/NewWorld.CAD.ViewOnly/default.aspx")
 
 	b.Dom().Find("div.ctl00_content_uxCallGrid div.Body a").Each(func(_ int, s *goquery.Selection) {
 		x, exists := s.Attr("href")
@@ -165,4 +166,84 @@ func (c *CadBrowser) GetStatus(url string) (CallStatus, error) {
 	// td.DispatchTime a / td.Key_EnRouteTime a / td.Key_ArrivedTime a
 
 	return ret, nil
+}
+
+// GetClearedCalls fetches all cleared calls for specified date in format
+// MM/DD/YYYY.
+func (c *CadBrowser) GetClearedCalls(dt string) (map[string]string, error) {
+	calls := make(map[string]string, 0)
+
+	if !c.initialized {
+		return calls, errors.New("Not initialized")
+	}
+
+	b := c.browserObject
+
+	// Return to main status screen
+	//b.Open("http://cadview.qvec.org/NewWorld.CAD.ViewOnly/default.aspx")
+
+	// Open cleared call search page
+	//b.Click("a#ctl00_uxSearch")
+	//b.Open("http://cadview.qvec.org/NewWorld.CAD.ViewOnly/ClearedCallSearch.aspx")
+	b.Open("http://cadview.qvec.org/NewWorld.CAD.ViewOnly/ClearedCallSearch.aspx")
+	//log.Printf("CLEARED CALL SEARCH BODY: %#v", b.Body())
+
+	if len(b.Forms()) < 1 {
+		return calls, errors.New("Form does not exist")
+	}
+	f, err := b.Form("form#aspnetForm")
+	if err != nil {
+		return calls, err
+	}
+	f.Input("ctl00$content$uxORI", "04042    ")
+	f.Input("ctl00$content$uxFromDate", dt)
+	f.Input("ctl00$content$uxThruDate", dt)
+	f.Input("ctl00$content$uxFromTime", "")
+	f.Input("ctl00$content$uxThruTime", "")
+	f.Input("ctl00$content$uxUnitNum", "")
+	f.Input("ctl00$content$uxStreet", "")
+	f.Input("ctl00$content$uxSearch", "Search")
+	f.Input("ctl00$content$uxClearedCallsGrid$ctl19", "(All)")
+	f.Input("ctl00$content$uxClearedCallsGrid$ctl31", "(All)")
+	f.Input("ctl00$content$uxClearedCallsGrid$ctl43", "(All)")
+	f.Input("ctl00$content$uxClearedCallsGrid$ctl49", "(All)")
+	f.Input("ctl00$content$uxClearedCallsGrid$ctl55", "(All)")
+	f.Input("ctl00$content$uxClearedCallsGrid$ColumnOrder", "CFSNumber|100px,CallType|171px,Address|481px,CallORI|100px,CallTime|134px,DispatchTime|131px,ArriveTime|130px,IncidentNumber|100px")
+	f.Input("ctl00$content$uxClearedCallsGrid$uxDropDownPages", "1")
+	f.Input("ctl00$content$uxClearedCallsGrid$uxGridSettingsId", "ASP.clearedcallsearch_aspx|uxClearedCallsGrid")
+
+	//ccsf, _ := f.Dom().Html()
+	//log.Printf("CLEARED CALL SEARCH FORM: %s", ccsf)
+
+	if f.Click("ctl00$content$uxSearch") != nil {
+		return calls, errors.Wrap(err, "Unable to click")
+	}
+
+	//log.Printf("CLEARED CALL BODY: %#v", b.Body())
+	b.Dom().Find("div#ctl00_content_uxClearedCallsGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
+		//h, _ := s.Html()
+		//log.Printf("OUTER : %#v", h)
+		var url string
+		var id string
+		s.Find("td.Key_CFSNumber a").Each(func(_ int, s2 *goquery.Selection) {
+			//h, _ := s2.Html()
+			//log.Printf("INNER1: %#v", h)
+
+			x, exists := s2.Attr("href")
+			if exists {
+				url = URLPREFIX + x
+			}
+		})
+		s.Find("td.Key_IncidentNumber a").Each(func(_ int, s2 *goquery.Selection) {
+			//h, _ := s2.Html()
+			//log.Printf("INNER2: %#v", h)
+
+			id = s2.Text()
+		})
+		if id != "" && url != "" {
+			calls[id] = url
+		}
+	})
+
+	return calls, nil
 }

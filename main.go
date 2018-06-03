@@ -4,6 +4,8 @@ import (
 	"flag"
 	"log"
 	"time"
+
+	"github.com/jbuchbinder/qveccadmonitor/monitor"
 )
 
 var (
@@ -14,9 +16,9 @@ var (
 func main() {
 	flag.Parse()
 
-	cadbrowser := CadBrowser{}
+	cadbrowser := monitor.CadBrowser{}
 	log.Printf("Logging into CAD interface")
-	err := cadbrowser.Login(USER, PASS)
+	err := cadbrowser.Login(monitor.USER, monitor.PASS)
 	if err != nil {
 		panic(err)
 	}

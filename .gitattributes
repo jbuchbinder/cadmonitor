@@ -1,1 +1,2 @@
 secrets.go filter=git-crypt diff=git-crypt
+monitor/secrets.go filter=git-crypt diff=git-crypt
