@@ -9,14 +9,14 @@ import (
 )
 
 var (
-	Suffix       = flag.String("suffix", "", "Unit suffix to restrict polling to (i.e. 63 for STA63 units)")
-	PollInterval = flag.Int("poll-interval", 15, "Poll interval in seconds")
+	suffix       = flag.String("suffix", "", "Unit suffix to restrict polling to (i.e. 63 for STA63 units)")
+	pollInterval = flag.Int("poll-interval", 15, "Poll interval in seconds")
 )
 
 func main() {
 	flag.Parse()
 
-	cadbrowser := monitor.CadBrowser{}
+	cadbrowser := monitor.CadBrowser{Suffix: *suffix}
 	log.Printf("Logging into CAD interface")
 	err := cadbrowser.Login(monitor.USER, monitor.PASS)
 	if err != nil {
@@ -49,8 +49,8 @@ func main() {
 
 		// Sleep during poll interval
 	sleeploop:
-		log.Printf("Sleeping for %d seconds", *PollInterval)
-		for interval := 0; interval < *PollInterval; interval++ {
+		log.Printf("Sleeping for %d seconds", *pollInterval)
+		for interval := 0; interval < *pollInterval; interval++ {
 			time.Sleep(1 * time.Second)
 		}
 	}

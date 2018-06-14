@@ -4,6 +4,7 @@ import (
 	//"fmt"
 
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -14,6 +15,10 @@ import (
 )
 
 type CadBrowser struct {
+	// Suffix is the required suffix for units. Leaving blank disables
+	// qualification by this value.
+	Suffix string
+
 	browserObject *browser.Browser
 	initialized   bool
 }
@@ -182,6 +187,10 @@ func (c *CadBrowser) GetStatus(url string) (CallStatus, error) {
 			default:
 			}
 		})
+
+		if c.Suffix != "" && strings.HasSuffix(unit, c.Suffix) {
+			return
+		}
 
 		ret.Units[unit] = UnitStatus{
 			Unit:         unit,
