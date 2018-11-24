@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func Test_Monitor(t *testing.T) {
-	m := CadBrowser{}
+func Test_AegisMonitor(t *testing.T) {
+	m := AegisMonitor{}
 	err := m.Login(USER, PASS)
 	if err != nil {
 		t.Error(err)

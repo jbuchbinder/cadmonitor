@@ -10,14 +10,26 @@ import (
 
 var (
 	activeCalls = flag.Bool("active", false, "Show active calls")
+	baseURL     = flag.String("baseUrl", "http://cadview.qvec.org/NewWorld.CAD.ViewOnly/", "Base URL")
 	dateFlag    = flag.String("date", "06/02/2018", "Date in MM/DD/YYYY format")
+	monitorType = flag.String("monitorType", "aegis", "Type of CAD system being monitored")
 )
 
 func main() {
 	flag.Parse()
 
-	m := monitor.CadBrowser{}
-	err := m.Login(monitor.USER, monitor.PASS)
+	m, err := monitor.GetCadMonitor(*monitorType)
+	if err != nil {
+		panic(err)
+	}
+	err = m.ConfigureFromValues(map[string]string{
+		"baseUrl": *baseURL,
+		"suffix":  "",
+	})
+	if err != nil {
+		panic(err)
+	}
+	err = m.Login(monitor.USER, monitor.PASS)
 	if err != nil {
 		panic(err)
 	}

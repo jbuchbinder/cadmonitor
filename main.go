@@ -9,16 +9,28 @@ import (
 )
 
 var (
-	suffix       = flag.String("suffix", "", "Unit suffix to restrict polling to (i.e. 63 for STA63 units)")
+	baseURL      = flag.String("baseUrl", "http://cadview.qvec.org/NewWorld.CAD.ViewOnly/", "Base URL")
+	monitorType  = flag.String("monitorType", "aegis", "Type of CAD system being monitored")
 	pollInterval = flag.Int("poll-interval", 15, "Poll interval in seconds")
+	suffix       = flag.String("suffix", "", "Unit suffix to restrict polling to (i.e. 63 for STA63 units)")
 )
 
 func main() {
 	flag.Parse()
 
-	cadbrowser := monitor.CadBrowser{Suffix: *suffix}
+	cadbrowser, err := monitor.GetCadMonitor(*monitorType)
+	if err != nil {
+		panic(err)
+	}
+	err = cadbrowser.ConfigureFromValues(map[string]string{
+		"baseUrl": *baseURL,
+		"suffix":  *suffix,
+	})
+	if err != nil {
+		panic(err)
+	}
 	log.Printf("Logging into CAD interface")
-	err := cadbrowser.Login(monitor.USER, monitor.PASS)
+	err = cadbrowser.Login(monitor.USER, monitor.PASS)
 	if err != nil {
 		panic(err)
 	}
