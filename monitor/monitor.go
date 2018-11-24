@@ -18,14 +18,14 @@ type CadMonitor interface {
 
 var (
 	cadMonitorRegistry     = map[string]func() CadMonitor{}
-	cadMonitorRegistryLock *sync.Mutex
+	cadMonitorRegistryLock = new(sync.Mutex)
 )
 
 // RegisterCadMonitor adds a new CadMonitor instance to the registry
 func RegisterCadMonitor(name string, m func() CadMonitor) {
 	cadMonitorRegistryLock.Lock()
 	defer cadMonitorRegistryLock.Unlock()
-	cadMonitorRegistry["name"] = m
+	cadMonitorRegistry[name] = m
 }
 
 // GetCadMonitor instantiates a CadMonitor by name
