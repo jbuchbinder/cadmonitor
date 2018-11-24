@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jbuchbinder/qveccadmonitor/monitor"
+	"github.com/jbuchbinder/cadmonitor/monitor"
 )
 
 var (

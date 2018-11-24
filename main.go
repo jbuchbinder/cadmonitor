@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/jbuchbinder/qveccadmonitor/monitor"
+	"github.com/jbuchbinder/cadmonitor/monitor"
 )
 
 var (

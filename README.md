@@ -1,9 +1,8 @@
 # QVEC CAD MONITOR
 
-[![Build Status](https://secure.travis-ci.org/jbuchbinder/qveccadmonitor.png)](http://travis-ci.org/jbuchbinder/qveccadmonitor)
+[![Build Status](https://secure.travis-ci.org/jbuchbinder/cadmonitor.png)](http://travis-ci.org/jbuchbinder/cadmonitor)
 
-
-[QVEC](http://qvec.org) CAD system monitor for apparatuses
+Emergency services CAD system monitor for apparatuses. Originally designed to interface with [QVEC](http://qvec.org)'s Aegis system
 
 ## Development
 
@@ -15,4 +14,6 @@ The default `secrets.go` file is encrypted by the developer, but you can create 
 	        USER = "username"
 	        PASS = "password"
 	)
+
+These are for unit tests, and do not affect the functionality of the actual library. 
 
