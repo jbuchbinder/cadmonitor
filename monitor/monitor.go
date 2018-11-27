@@ -8,9 +8,12 @@ import (
 
 // CadMonitor defines the interface for all monitors used to watch CAD systems.
 type CadMonitor interface {
+	// ConfigureFromValues populates fields specific to an implementation of
+	// CadMonitor from a map[string]string.
 	ConfigureFromValues(map[string]string) error
 	// Login authenticates to a CAD system using the provided username and password
 	Login(string, string) error
+	// GetActiveCalls returns a list of active call URLs or identifiers
 	GetActiveCalls() ([]string, error)
 	GetStatus(string) (CallStatus, error)
 	GetClearedCalls(string) (map[string]string, error)
