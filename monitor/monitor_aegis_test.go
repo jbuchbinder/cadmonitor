@@ -5,7 +5,7 @@ import (
 )
 
 func Test_AegisMonitor(t *testing.T) {
-	m := AegisMonitor{}
+	m := AegisMonitor{FDID: "04042"}
 	err := m.Login(USER, PASS)
 	if err != nil {
 		t.Error(err)

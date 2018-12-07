@@ -24,7 +24,11 @@ type Narrative struct {
 }
 
 type CallStatus struct {
+	CallTime     time.Time             `json:"call_time"`
+	DispatchTime time.Time             `json:"dispatch_time"`
+	ArrivalTime  time.Time             `json:"arrival_time"`
 	CallType     string                `json:"call_type"`
+	CallerPhone  string                `json:"caller_phone"`
 	NatureOfCall string                `json:"nature_of_call"`
 	Location     string                `json:"location"`
 	CrossStreets string                `json:"cross_streets"`

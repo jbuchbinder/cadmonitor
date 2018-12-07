@@ -3,6 +3,7 @@ package monitor
 import (
 	//"fmt"
 
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -32,6 +33,10 @@ type AegisMonitor struct {
 	// LoginURL (example: "http://cadview.qvec.org/NewWorld.CAD.ViewOnly/")
 	BaseURL string
 
+	// FDID represents the FDID string which will be right padded to select
+	// only local FDID events.
+	FDID string
+
 	browserObject *browser.Browser
 	initialized   bool
 }
@@ -39,10 +44,13 @@ type AegisMonitor struct {
 func (c *AegisMonitor) ConfigureFromValues(values map[string]string) error {
 	var ok bool
 	if c.Suffix, ok = values["suffix"]; !ok {
-		return errors.New("'suffix' not defined")
+		//return errors.New("'suffix' not defined")
 	}
 	if c.BaseURL, ok = values["baseUrl"]; !ok {
 		return errors.New("'baseUrl' not defined")
+	}
+	if c.FDID, ok = values["fdid"]; !ok {
+		return errors.New("'fdid' not defined")
 	}
 	return nil
 }
@@ -126,6 +134,18 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 		})
 		s.Find("b").Each(func(_ int, inner *goquery.Selection) {
 			switch inner.Text() {
+			case "Call Date/Time: ":
+				ret.CallTime, _ = time.Parse("01/02/2006 15:04:05", content) // Mon Jan 2 15:04:05 -0700 MST 2006
+				break
+			case "Dispatch Date/Time: ":
+				ret.DispatchTime, _ = time.Parse("01/02/2006 15:04:05", content) // Mon Jan 2 15:04:05 -0700 MST 2006
+				break
+			case "Arrival Date/Time: ":
+				ret.ArrivalTime, _ = time.Parse("01/02/2006 15:04:05", content) // Mon Jan 2 15:04:05 -0700 MST 2006
+				break
+			case "Caller Phone: ":
+				ret.CallerPhone = content
+				break
 			case "Priority: ":
 				ret.Priority, _ = strconv.Atoi(content)
 				break
@@ -261,7 +281,7 @@ func (c *AegisMonitor) GetClearedCalls(dt string) (map[string]string, error) {
 	if err != nil {
 		return calls, err
 	}
-	f.Input("ctl00$content$uxORI", "04042    ")
+	f.Input("ctl00$content$uxORI", fmt.Sprintf("%-9v", c.FDID))
 	f.Input("ctl00$content$uxFromDate", dt)
 	f.Input("ctl00$content$uxThruDate", dt)
 	f.Input("ctl00$content$uxFromTime", "")
