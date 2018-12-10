@@ -4,6 +4,7 @@ import (
 	//"fmt"
 
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -39,6 +40,11 @@ type AegisMonitor struct {
 
 	browserObject *browser.Browser
 	initialized   bool
+	debug         bool
+}
+
+func (c *AegisMonitor) SetDebug(d bool) {
+	c.debug = d
 }
 
 func (c *AegisMonitor) ConfigureFromValues(values map[string]string) error {
@@ -272,7 +278,9 @@ func (c *AegisMonitor) GetClearedCalls(dt string) (map[string]string, error) {
 	//b.Click("a#ctl00_uxSearch")
 	//b.Open(c.BaseURL + a)
 	b.Open(c.BaseURL + aegisClearedCallURL)
-	//log.Printf("CLEARED CALL SEARCH BODY: %#v", b.Body())
+	if c.debug {
+		log.Printf("CLEARED CALL SEARCH BODY: %#v", b.Body())
+	}
 
 	if len(b.Forms()) < 1 {
 		return calls, errors.New("Form does not exist")
@@ -305,7 +313,9 @@ func (c *AegisMonitor) GetClearedCalls(dt string) (map[string]string, error) {
 		return calls, errors.Wrap(err, "Unable to click")
 	}
 
-	//log.Printf("CLEARED CALL BODY: %#v", b.Body())
+	if c.debug {
+		log.Printf("CLEARED CALL BODY: %#v", b.Body())
+	}
 	b.Dom().Find("div#ctl00_content_uxClearedCallsGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
 		//h, _ := s.Html()
 		//log.Printf("OUTER : %#v", h)

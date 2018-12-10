@@ -17,6 +17,8 @@ type CadMonitor interface {
 	GetActiveCalls() ([]string, error)
 	GetStatus(string) (CallStatus, error)
 	GetClearedCalls(string) (map[string]string, error)
+	// SetDebug determines whether debug is enabled or not
+	SetDebug(bool)
 }
 
 var (
