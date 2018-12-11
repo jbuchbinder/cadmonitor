@@ -5,7 +5,10 @@ import (
 )
 
 func Test_AegisMonitor(t *testing.T) {
-	m := AegisMonitor{FDID: "04042"}
+	m := AegisMonitor{
+		BaseURL: "http://cadview.qvec.org/NewWorld.CAD.ViewOnly/",
+		FDID:    "04042",
+	}
 	err := m.Login(USER, PASS)
 	if err != nil {
 		t.Error(err)

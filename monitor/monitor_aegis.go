@@ -20,6 +20,7 @@ const (
 	aegisClearedCallURL = "ClearedCallSearch.aspx"
 	aegisLoginURL       = "Login.aspx"
 	aegisMainURL        = "default.aspx"
+	aegisLoggedOut      = "<span><H1>Server Error"
 )
 
 func init() {
@@ -59,6 +60,10 @@ func (c *AegisMonitor) ConfigureFromValues(values map[string]string) error {
 		return errors.New("'fdid' not defined")
 	}
 	return nil
+}
+
+func (c *AegisMonitor) LoggedIn() bool {
+	return strings.Index(c.browserObject.Body(), aegisLoggedOut) == -1
 }
 
 func (c *AegisMonitor) Login(user, pass string) error {
@@ -111,6 +116,11 @@ func (c *AegisMonitor) GetActiveCalls() ([]string, error) {
 	// Return to main status screen
 	b.Open(c.BaseURL + aegisMainURL)
 
+	// Determine if we're logged out
+	if !c.LoggedIn() {
+		return calls, ErrCadMonitorLoggedOut
+	}
+
 	b.Dom().Find("div.ctl00_content_uxCallGrid div.Body a").Each(func(_ int, s *goquery.Selection) {
 		x, exists := s.Attr("href")
 		if exists {
@@ -131,6 +141,11 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 	err := b.Open(url)
 	if err != nil {
 		return ret, err
+	}
+
+	// Determine if we're logged out
+	if !c.LoggedIn() {
+		return ret, ErrCadMonitorLoggedOut
 	}
 
 	b.Dom().Find("table#ctl00_content_uxCallDetail tr td table tr td").Each(func(_ int, s *goquery.Selection) {
@@ -273,6 +288,11 @@ func (c *AegisMonitor) GetClearedCalls(dt string) (map[string]string, error) {
 
 	// Return to main status screen
 	b.Open(c.BaseURL + aegisMainURL)
+
+	// Determine if we're logged out
+	if !c.LoggedIn() {
+		return calls, ErrCadMonitorLoggedOut
+	}
 
 	// Open cleared call search page
 	//b.Click("a#ctl00_uxSearch")

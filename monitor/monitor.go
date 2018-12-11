@@ -22,6 +22,9 @@ type CadMonitor interface {
 }
 
 var (
+	// ErrCadMonitorLoggedOut represents a status where the application needs to reauthenticate
+	ErrCadMonitorLoggedOut = errors.New("logged out")
+
 	cadMonitorRegistry     = map[string]func() CadMonitor{}
 	cadMonitorRegistryLock = new(sync.Mutex)
 )
