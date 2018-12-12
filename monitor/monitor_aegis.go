@@ -42,6 +42,8 @@ type AegisMonitor struct {
 	browserObject *browser.Browser
 	initialized   bool
 	debug         bool
+	cacheUser     string
+	cachePass     string
 }
 
 func (c *AegisMonitor) SetDebug(d bool) {
@@ -69,6 +71,10 @@ func (c *AegisMonitor) LoggedIn() bool {
 func (c *AegisMonitor) Login(user, pass string) error {
 	b := surf.NewBrowser()
 	c.browserObject = b
+
+	// Just so we can reconnect if necessary
+	c.cacheUser = user
+	c.cachePass = pass
 
 	b.SetUserAgent(agent.Chrome())
 
@@ -104,6 +110,24 @@ func (c *AegisMonitor) Login(user, pass string) error {
 	return nil
 }
 
+func (c *AegisMonitor) KeepAlive() error {
+	if !c.initialized {
+		return errors.New("Not initialized")
+	}
+
+	b := c.browserObject
+
+	// Test main screen
+	b.Open(c.BaseURL + aegisMainURL)
+
+	if !c.LoggedIn() {
+		err := c.Login(c.cacheUser, c.cachePass)
+		return err
+	}
+
+	return nil
+}
+
 func (c *AegisMonitor) GetActiveCalls() ([]string, error) {
 	calls := make([]string, 0)
 
@@ -121,7 +145,9 @@ func (c *AegisMonitor) GetActiveCalls() ([]string, error) {
 		return calls, ErrCadMonitorLoggedOut
 	}
 
-	b.Dom().Find("div.ctl00_content_uxCallGrid div.Body a").Each(func(_ int, s *goquery.Selection) {
+	//log.Printf("%s", b.Body())
+
+	b.Dom().Find("div#ctl00_content_uxCallGrid div.Body table tbody tr td.Key_CFSNumber a").Each(func(_ int, s *goquery.Selection) {
 		x, exists := s.Attr("href")
 		if exists {
 			calls = append(calls, x)
@@ -138,7 +164,7 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 	ret.Units = map[string]UnitStatus{}
 	ret.Narratives = make([]Narrative, 0)
 
-	err := b.Open(url)
+	err := b.Open(c.BaseURL + url)
 	if err != nil {
 		return ret, err
 	}

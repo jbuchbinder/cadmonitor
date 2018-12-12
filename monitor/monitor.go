@@ -19,6 +19,8 @@ type CadMonitor interface {
 	GetClearedCalls(string) (map[string]string, error)
 	// SetDebug determines whether debug is enabled or not
 	SetDebug(bool)
+	// KeepAlive represents some manner of maintaining a persistent connection
+	KeepAlive() error
 }
 
 var (
