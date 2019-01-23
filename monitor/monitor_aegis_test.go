@@ -6,7 +6,7 @@ import (
 
 func Test_AegisMonitor(t *testing.T) {
 	m := AegisMonitor{
-		BaseURL: "http://cadview.qvec.org/NewWorld.CAD.ViewOnly/",
+		BaseURL: "http://cadview.qvec.org/",
 		FDID:    "04042",
 	}
 	err := m.Login(USER, PASS)
@@ -24,7 +24,7 @@ func Test_AegisMonitor(t *testing.T) {
 		t.Logf("%#v", ret)
 	*/
 
-	calls, err := m.GetClearedCalls("05/13/2018")
+	calls, err := m.GetClearedCalls("01/21/2019")
 	//calls, err := m.GetActiveCalls()
 	if err != nil {
 		t.Error(err)

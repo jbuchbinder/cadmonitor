@@ -4,10 +4,6 @@ import (
 	"time"
 )
 
-const (
-	URLPREFIX = "http://cadview.qvec.org/NewWorld.CAD.ViewOnly/"
-)
-
 type UnitStatus struct {
 	Unit         string `json:"unit"`
 	Status       string `json:"status"`

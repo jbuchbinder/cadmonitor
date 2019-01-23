@@ -32,12 +32,16 @@ type AegisMonitor struct {
 	// qualification by this value.
 	Suffix string
 
-	// LoginURL (example: "http://cadview.qvec.org/NewWorld.CAD.ViewOnly/")
+	// LoginURL (example: "http://cadview.qvec.org/NewWorld.CAD.ViewOnly/"
+	// or "http://cadview.qvec.org/")
 	BaseURL string
 
 	// FDID represents the FDID string which will be right padded to select
 	// only local FDID events.
 	FDID string
+
+	// Numeric protocol; 0 defaults to latest
+	Protocol int64
 
 	browserObject *browser.Browser
 	initialized   bool
@@ -60,6 +64,9 @@ func (c *AegisMonitor) ConfigureFromValues(values map[string]string) error {
 	}
 	if c.FDID, ok = values["fdid"]; !ok {
 		return errors.New("'fdid' not defined")
+	}
+	if x, ok := values["protocol"]; ok {
+		c.Protocol, _ = strconv.ParseInt(x, 10, 64)
 	}
 	return nil
 }
@@ -164,19 +171,39 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 	ret.Units = map[string]UnitStatus{}
 	ret.Narratives = make([]Narrative, 0)
 
+	//log.Printf("url = %s", c.BaseURL+url)
 	err := b.Open(c.BaseURL + url)
 	if err != nil {
 		return ret, err
 	}
+
+	if strings.Index(b.Body(), "<h2> <i>Runtime Error</i> </h2></span>") != -1 {
+		return ret, errors.New("Error fetching call page")
+	}
+
+	//log.Print(b.Body())
 
 	// Determine if we're logged out
 	if !c.LoggedIn() {
 		return ret, ErrCadMonitorLoggedOut
 	}
 
-	b.Dom().Find("table#ctl00_content_uxCallDetail tr td table tr td").Each(func(_ int, s *goquery.Selection) {
+	var tableSelector string
+	switch c.Protocol {
+	case 1:
+		tableSelector = "table#ctl00_content_uxCallDetail tr td table tr td"
+		break
+	case 2:
+	default:
+		tableSelector = "div#ctl00_content_uxDetailWrapper table#ctl00_content_uxCallDetail tr td div table.summary tr td"
+	}
+	b.Dom().Find(tableSelector).Each(func(_ int, s *goquery.Selection) {
 		var content string
 		s.Find("span").Each(func(_ int, inner *goquery.Selection) {
+			if inner.Text() == "" {
+				// Skip false empties
+				return
+			}
 			content = inner.Text()
 		})
 		s.Find("b").Each(func(_ int, inner *goquery.Selection) {
@@ -306,6 +333,8 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 func (c *AegisMonitor) GetClearedCalls(dt string) (map[string]string, error) {
 	calls := make(map[string]string, 0)
 
+	log.Printf("GetClearedCalls")
+
 	if !c.initialized {
 		return calls, errors.New("Not initialized")
 	}
@@ -335,7 +364,16 @@ func (c *AegisMonitor) GetClearedCalls(dt string) (map[string]string, error) {
 	if err != nil {
 		return calls, err
 	}
-	f.Input("ctl00$content$uxORI", fmt.Sprintf("%-9v", c.FDID))
+	switch c.Protocol {
+	case 1:
+		// Original protocol
+		f.Input("ctl00$content$uxORI", fmt.Sprintf("%-9v", c.FDID))
+		break
+	case 2:
+	default:
+		// From protocol 2 on, no space padding
+		f.Input("ctl00$content$uxORI", c.FDID)
+	}
 	f.Input("ctl00$content$uxFromDate", dt)
 	f.Input("ctl00$content$uxThruDate", dt)
 	f.Input("ctl00$content$uxFromTime", "")
@@ -368,12 +406,18 @@ func (c *AegisMonitor) GetClearedCalls(dt string) (map[string]string, error) {
 		var url string
 		var id string
 		s.Find("td.Key_CFSNumber a").Each(func(_ int, s2 *goquery.Selection) {
+			if url != "" {
+				// Just accept the first one
+				return
+			}
+
 			//h, _ := s2.Html()
 			//log.Printf("INNER1: %#v", h)
 
 			x, exists := s2.Attr("href")
 			if exists {
-				url = URLPREFIX + x
+				url = x
+				//log.Printf("url = %s, x = %s, BaseURL = %s", url, x, c.BaseURL)
 			}
 		})
 		s.Find("td.Key_IncidentNumber a").Each(func(_ int, s2 *goquery.Selection) {
