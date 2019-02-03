@@ -9,10 +9,11 @@ import (
 )
 
 var (
-	baseURL      = flag.String("baseUrl", "http://cadview.qvec.org/NewWorld.CAD.ViewOnly/", "Base URL")
+	baseURL      = flag.String("baseUrl", "http://cadview.qvec.org/", "Base URL")
 	monitorType  = flag.String("monitorType", "aegis", "Type of CAD system being monitored")
 	pollInterval = flag.Int("poll-interval", 15, "Poll interval in seconds")
 	suffix       = flag.String("suffix", "", "Unit suffix to restrict polling to (i.e. 63 for STA63 units)")
+	fdid         = flag.String("fdid", "04042", "FDID for agency")
 )
 
 func main() {
@@ -25,6 +26,7 @@ func main() {
 	err = cadbrowser.ConfigureFromValues(map[string]string{
 		"baseUrl": *baseURL,
 		"suffix":  *suffix,
+		"fdid":    *fdid,
 	})
 	if err != nil {
 		panic(err)
