@@ -1,8 +1,6 @@
 package monitor
 
 import (
-	//"fmt"
-
 	"fmt"
 	"log"
 	"strconv"
@@ -27,6 +25,7 @@ func init() {
 	RegisterCadMonitor("aegis", func() CadMonitor { return &AegisMonitor{} })
 }
 
+// AegisMonitor represents a CadMonitor for the AEGIS CAD system
 type AegisMonitor struct {
 	// Suffix is the required suffix for units. Leaving blank disables
 	// qualification by this value.
@@ -50,6 +49,7 @@ type AegisMonitor struct {
 	cachePass     string
 }
 
+// SetDebug enables or disables debug
 func (c *AegisMonitor) SetDebug(d bool) {
 	c.debug = d
 }
