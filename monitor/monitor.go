@@ -15,12 +15,16 @@ type CadMonitor interface {
 	Login(string, string) error
 	// GetActiveCalls returns a list of active call URLs or identifiers
 	GetActiveCalls() ([]string, error)
+	// GetStatus given an identifier retrieves a CallStatus entry that describes a call
 	GetStatus(string) (CallStatus, error)
+	// GetClearedCalls retrieves a map of ids for cleared calls for a specific date
 	GetClearedCalls(string) (map[string]string, error)
 	// SetDebug determines whether debug is enabled or not
 	SetDebug(bool)
 	// KeepAlive represents some manner of maintaining a persistent connection
 	KeepAlive() error
+	// Monitor actively runs a monitoring function with a callback
+	Monitor(func(CallStatus) error, int) error
 }
 
 var (
@@ -38,8 +42,8 @@ func RegisterCadMonitor(name string, m func() CadMonitor) {
 	cadMonitorRegistry[name] = m
 }
 
-// GetCadMonitor instantiates a CadMonitor by name
-func GetCadMonitor(name string) (m CadMonitor, err error) {
+// InstantiateCadMonitor instantiates a CadMonitor by name
+func InstantiateCadMonitor(name string) (m CadMonitor, err error) {
 	var f func() CadMonitor
 	var found bool
 	if f, found = cadMonitorRegistry[name]; !found {

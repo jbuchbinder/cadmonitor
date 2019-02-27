@@ -39,7 +39,7 @@ func main() {
 	for {
 		log.Printf("Starting main loop")
 
-		calls, err := cadbrowser.GetActiveCalls()
+		calls, err := cadbrowser.InstantiateActiveCalls()
 		if err != nil {
 			log.Printf("err: %s", err.Error())
 			goto sleeploop

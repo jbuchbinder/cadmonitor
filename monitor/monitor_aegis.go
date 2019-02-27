@@ -42,6 +42,9 @@ type AegisMonitor struct {
 	// Numeric protocol; 0 defaults to latest
 	Protocol int64
 
+	// TerminateMonitor indicates that any running monitor is to be terminated
+	TerminateMonitor bool
+
 	browserObject *browser.Browser
 	initialized   bool
 	debug         bool
@@ -306,7 +309,7 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 			}
 		})
 
-		if c.Suffix != "" && strings.HasSuffix(unit, c.Suffix) {
+		if c.Suffix != "" && !strings.HasSuffix(unit, c.Suffix) {
 			return
 		}
 
@@ -432,4 +435,55 @@ func (c *AegisMonitor) GetClearedCalls(dt string) (map[string]string, error) {
 	})
 
 	return calls, nil
+}
+
+// Monitor runs a monitoring function with a callback function
+func (c *AegisMonitor) Monitor(callback func(CallStatus) error, pollInterval int) error {
+	currentCallMap := map[string]CallStatus{}
+	for {
+		// Poll for data
+		calls, err := c.GetActiveCalls()
+		if err != nil {
+			log.Printf("Monitor: %s", err.Error())
+			goto continueOn
+		}
+
+		for _, call := range calls {
+			if _, ok := currentCallMap[call]; !ok {
+				log.Printf("Found new call URL %s", call)
+				status, err := c.GetStatus(call)
+				if err != nil {
+					log.Printf("Monitor: %s", err.Error())
+					continue
+				}
+				// Record in current mapping so we don't do bad things
+				currentCallMap[call] = status
+				// If there's a callback, send the data back
+				if callback != nil {
+					go func(status CallStatus) {
+						err := callback(status)
+						if err != nil {
+							log.Printf("Monitor: Callback: %s", err.Error())
+						}
+					}(status)
+				}
+			}
+		}
+
+		if c.TerminateMonitor {
+			log.Printf("Terminating monitor")
+			break
+		}
+
+		// Sleep for pollInterval duration
+	continueOn:
+		for iter := 0; iter < pollInterval; iter++ {
+			time.Sleep(time.Second)
+			if c.TerminateMonitor {
+				log.Printf("Terminating monitor")
+				break
+			}
+		}
+	}
+	return nil
 }
