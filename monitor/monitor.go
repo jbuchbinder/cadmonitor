@@ -15,6 +15,9 @@ type CadMonitor interface {
 	Login(string, string) error
 	// GetActiveCalls returns a list of active call URLs or identifiers
 	GetActiveCalls() ([]string, error)
+	// GetActiveAndUnassignedCalls returns a list of CallStatus objects for unassigned and
+	// current calls
+	GetActiveAndUnassignedCalls() (map[string]CallStatus, error)
 	// GetStatus given an identifier retrieves a CallStatus entry that describes a call
 	GetStatus(string) (CallStatus, error)
 	// GetClearedCalls retrieves a map of ids for cleared calls for a specific date
@@ -23,6 +26,8 @@ type CadMonitor interface {
 	SetDebug(bool)
 	// KeepAlive represents some manner of maintaining a persistent connection
 	KeepAlive() error
+	TerminateMonitor() bool
+	SetTerminateMonitor(bool)
 	// Monitor actively runs a monitoring function with a callback
 	Monitor(func(CallStatus) error, int) error
 }

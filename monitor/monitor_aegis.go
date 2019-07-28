@@ -42,19 +42,25 @@ type AegisMonitor struct {
 	// Numeric protocol; 0 defaults to latest
 	Protocol int64
 
-	// TerminateMonitor indicates that any running monitor is to be terminated
-	TerminateMonitor bool
-
-	browserObject *browser.Browser
-	initialized   bool
-	debug         bool
-	cacheUser     string
-	cachePass     string
+	terminateMonitor bool
+	browserObject    *browser.Browser
+	initialized      bool
+	debug            bool
+	cacheUser        string
+	cachePass        string
 }
 
 // SetDebug enables or disables debug
 func (c *AegisMonitor) SetDebug(d bool) {
 	c.debug = d
+}
+
+func (c *AegisMonitor) SetTerminateMonitor(t bool) {
+	c.terminateMonitor = t
+}
+
+func (c AegisMonitor) TerminateMonitor() bool {
+	return c.terminateMonitor
 }
 
 func (c *AegisMonitor) ConfigureFromValues(values map[string]string) error {
@@ -167,12 +173,70 @@ func (c *AegisMonitor) GetActiveCalls() ([]string, error) {
 	return calls, nil
 }
 
+func (c *AegisMonitor) GetActiveAndUnassignedCalls() (map[string]CallStatus, error) {
+	calls := map[string]CallStatus{}
+
+	if !c.initialized {
+		return calls, errors.New("Not initialized")
+	}
+
+	b := c.browserObject
+
+	// Return to main status screen
+	b.Open(c.BaseURL + aegisMainURL)
+
+	// Determine if we're logged out
+	if !c.LoggedIn() {
+		return calls, ErrCadMonitorLoggedOut
+	}
+
+	//log.Printf("%s", b.Body())
+
+	b.Dom().Find("div#ctl00_content_uxCallGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
+		cs := CallStatus{}
+		s.Find("td.Key_Quadrant").Each(func(_ int, s2 *goquery.Selection) {
+			cs.District = s2.Text()
+		})
+		s.Find("td.Key_Address").Each(func(_ int, s2 *goquery.Selection) {
+			cs.Location = s2.Text()
+		})
+		s.Find("td.Key_CallTime").Each(func(_ int, s2 *goquery.Selection) {
+			if s2.Text() == "" {
+				return
+			}
+			cs.CallTime, _ = time.Parse("01/02/2006 15:04:05", s2.Text())
+		})
+		s.Find("td.Key_Priority").Each(func(_ int, s2 *goquery.Selection) {
+			if s2.Text() == "" {
+				return
+			}
+			cs.Priority, _ = strconv.Atoi(s2.Text())
+		})
+		s.Find("td.Key_CFSNumber a").Each(func(_ int, s2 *goquery.Selection) {
+			x, exists := s2.Attr("href")
+			if exists {
+				cs.ID = x
+				cs.LastUpdated = time.Now()
+				calls[x] = cs
+			}
+		})
+	})
+
+	return calls, nil
+}
+
 func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 	b := c.browserObject
+
+	// Start this an adequate amount of time back
+	latestTime := time.Now().Add(-10 * time.Hour)
 
 	ret := CallStatus{}
 	ret.Units = map[string]UnitStatus{}
 	ret.Narratives = make([]Narrative, 0)
+
+	// Maintain the unique identifier
+	ret.ID = url
 
 	//log.Printf("url = %s", c.BaseURL+url)
 	err := b.Open(c.BaseURL + url)
@@ -213,12 +277,21 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 			switch inner.Text() {
 			case "Call Date/Time: ":
 				ret.CallTime, _ = time.Parse("01/02/2006 15:04:05", content) // Mon Jan 2 15:04:05 -0700 MST 2006
+				if ret.CallTime.After(latestTime) {
+					latestTime = ret.CallTime
+				}
 				break
 			case "Dispatch Date/Time: ":
 				ret.DispatchTime, _ = time.Parse("01/02/2006 15:04:05", content) // Mon Jan 2 15:04:05 -0700 MST 2006
+				if ret.DispatchTime.After(latestTime) {
+					latestTime = ret.DispatchTime
+				}
 				break
 			case "Arrival Date/Time: ":
 				ret.ArrivalTime, _ = time.Parse("01/02/2006 15:04:05", content) // Mon Jan 2 15:04:05 -0700 MST 2006
+				if ret.ArrivalTime.After(latestTime) {
+					latestTime = ret.ArrivalTime
+				}
 				break
 			case "Caller Phone: ":
 				ret.CallerPhone = content
@@ -254,6 +327,9 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 			switch cl {
 			case "Key_DateTime DateTime":
 				nRecordedTime = dateTime(content)
+				if nRecordedTime.After(latestTime) {
+					latestTime = nRecordedTime
+				}
 				break
 			case "Key_Narrative":
 				nMessage = content
@@ -295,15 +371,27 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 				break
 			case "Key_DispatchTime DateTime":
 				dispatchTime = content
+				if dateTime(dispatchTime).After(latestTime) {
+					latestTime = dateTime(dispatchTime)
+				}
 				break
 			case "Key_EnRouteTime DateTime":
 				enrouteTime = content
+				if dateTime(enrouteTime).After(latestTime) {
+					latestTime = dateTime(enrouteTime)
+				}
 				break
 			case "Key_ArrivedTime DateTime":
 				arrivedTime = content
+				if dateTime(arrivedTime).After(latestTime) {
+					latestTime = dateTime(arrivedTime)
+				}
 				break
 			case "Key_ClearedTime DateTime":
 				clearedTime = content
+				if dateTime(clearedTime).After(latestTime) {
+					latestTime = dateTime(clearedTime)
+				}
 				break
 			default:
 			}
@@ -327,6 +415,9 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 	// td.Key_UnitNumber a == Unit Number (QVMEDIC)
 	// td.Key_Status a == Unit Status (DISPATCHED)
 	// td.DispatchTime a / td.Key_EnRouteTime a / td.Key_ArrivedTime a
+
+	// Only return the most recent time involved
+	ret.LastUpdated = latestTime
 
 	return ret, nil
 }
@@ -442,22 +533,41 @@ func (c *AegisMonitor) Monitor(callback func(CallStatus) error, pollInterval int
 	currentCallMap := map[string]CallStatus{}
 	for {
 		// Poll for data
-		calls, err := c.GetActiveCalls()
+		calls, err := c.GetActiveAndUnassignedCalls()
 		if err != nil {
 			log.Printf("Monitor: %s", err.Error())
 			goto continueOn
 		}
 
 		for _, call := range calls {
-			if _, ok := currentCallMap[call]; !ok {
-				log.Printf("Found new call URL %s", call)
-				status, err := c.GetStatus(call)
+			if _, ok := currentCallMap[call.ID]; !ok {
+				log.Printf("Found new call URL %s", call.ID)
+				status, err := c.GetStatus(call.ID)
 				if err != nil {
 					log.Printf("Monitor: %s", err.Error())
 					continue
 				}
 				// Record in current mapping so we don't do bad things
-				currentCallMap[call] = status
+				currentCallMap[call.ID] = status
+				// If there's a callback, send the data back
+				if callback != nil {
+					go func(status CallStatus) {
+						err := callback(status)
+						if err != nil {
+							log.Printf("Monitor: Callback: %s", err.Error())
+						}
+					}(status)
+				}
+			} else {
+				// Re-poll for call data
+				log.Printf("Updating call URL %s", call.ID)
+				status, err := c.GetStatus(call.ID)
+				if err != nil {
+					log.Printf("Monitor: %s", err.Error())
+					continue
+				}
+				// Record in current mapping so we don't do bad things
+				currentCallMap[call.ID] = status
 				// If there's a callback, send the data back
 				if callback != nil {
 					go func(status CallStatus) {
@@ -470,7 +580,7 @@ func (c *AegisMonitor) Monitor(callback func(CallStatus) error, pollInterval int
 			}
 		}
 
-		if c.TerminateMonitor {
+		if c.TerminateMonitor() {
 			log.Printf("Terminating monitor")
 			break
 		}
@@ -479,7 +589,7 @@ func (c *AegisMonitor) Monitor(callback func(CallStatus) error, pollInterval int
 	continueOn:
 		for iter := 0; iter < pollInterval; iter++ {
 			time.Sleep(time.Second)
-			if c.TerminateMonitor {
+			if c.TerminateMonitor() {
 				log.Printf("Terminating monitor")
 				break
 			}

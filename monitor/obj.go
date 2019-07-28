@@ -20,6 +20,7 @@ type Narrative struct {
 }
 
 type CallStatus struct {
+	ID           string                `json:"id"`
 	CallTime     time.Time             `json:"call_time"`
 	DispatchTime time.Time             `json:"dispatch_time"`
 	ArrivalTime  time.Time             `json:"arrival_time"`
@@ -27,8 +28,10 @@ type CallStatus struct {
 	CallerPhone  string                `json:"caller_phone"`
 	NatureOfCall string                `json:"nature_of_call"`
 	Location     string                `json:"location"`
+	District     string                `json:"district"`
 	CrossStreets string                `json:"cross_streets"`
 	Priority     int                   `json:"priority"`
 	Narratives   []Narrative           `json:"narratives"`
 	Units        map[string]UnitStatus `json:"units"`
+	LastUpdated  time.Time             `json:"last_updated"`
 }

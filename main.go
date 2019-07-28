@@ -3,23 +3,28 @@ package main
 import (
 	"flag"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/jbuchbinder/cadmonitor/monitor"
 )
 
 var (
-	baseURL      = flag.String("baseUrl", "http://cadview.qvec.org/", "Base URL")
-	monitorType  = flag.String("monitorType", "aegis", "Type of CAD system being monitored")
-	pollInterval = flag.Int("poll-interval", 15, "Poll interval in seconds")
-	suffix       = flag.String("suffix", "", "Unit suffix to restrict polling to (i.e. 63 for STA63 units)")
-	fdid         = flag.String("fdid", "04042", "FDID for agency")
+	baseURL       = flag.String("baseUrl", "http://cadview.qvec.org/", "Base URL")
+	monitorType   = flag.String("monitorType", "aegis", "Type of CAD system being monitored")
+	pollInterval  = flag.Int("poll-interval", 5, "Poll interval in seconds")
+	inactivityMin = flag.Int("inactivity", 10, "Inactivity in minutes before culling")
+	suffix        = flag.String("suffix", "", "Unit suffix to restrict polling to (i.e. 63 for STA63 units)")
+	fdid          = flag.String("fdid", "04042", "FDID for agency")
+
+	mutex       sync.Mutex
+	activeCalls map[string]monitor.CallStatus
 )
 
 func main() {
 	flag.Parse()
 
-	cadbrowser, err := monitor.GetCadMonitor(*monitorType)
+	cadbrowser, err := monitor.InstantiateCadMonitor(*monitorType)
 	if err != nil {
 		panic(err)
 	}
@@ -36,36 +41,88 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	for {
-		log.Printf("Starting main loop")
+	log.Printf("Starting main loop")
 
-		calls, err := cadbrowser.InstantiateActiveCalls()
-		if err != nil {
-			log.Printf("err: %s", err.Error())
-			goto sleeploop
-		}
+	activeCalls = map[string]monitor.CallStatus{}
 
-		if len(calls) == 0 {
-			log.Printf("No active calls")
-			goto sleeploop
-		}
+	// Cull active calls every poll interval x 4
+	go func() {
+		log.Printf("Culling loop started")
+		for {
 
-		for _, callurl := range calls {
-			status, err := cadbrowser.GetStatus(callurl)
-			if err != nil {
-				log.Printf("err: %s", err.Error())
-				continue
+			log.Printf("Culling job running")
+
+			mutex.Lock()
+
+			for k := range activeCalls {
+				if time.Since(activeCalls[k].LastUpdated) > (time.Duration(*inactivityMin) * time.Minute) {
+					log.Printf("Removing call %s due to inactivity", k)
+					delete(activeCalls, k)
+				}
 			}
 
-			// TODO: process data for call instead of displaying
-			log.Printf("Status: %#v", status)
+			mutex.Unlock()
+
+			for iter := 0; iter < *pollInterval*2; iter++ {
+				time.Sleep(time.Second)
+				if cadbrowser.TerminateMonitor() {
+					log.Printf("Terminating culling thread")
+					break
+				}
+			}
+
+		}
+	}()
+
+	cadbrowser.Monitor(func(call monitor.CallStatus) error {
+		mutex.Lock()
+		defer mutex.Unlock()
+
+		log.Printf("Callback triggered with ID : %s", call.ID)
+
+		// Check to see if it's in the active map
+		if _, ok := activeCalls[call.ID]; !ok {
+			// Store new copy, act accordingly
+			activeCalls[call.ID] = call
+
+			// Notify that there's a new call
+			return notifyNewCall(call)
 		}
 
-		// Sleep during poll interval
-	sleeploop:
-		log.Printf("Sleeping for %d seconds", *pollInterval)
-		for interval := 0; interval < *pollInterval; interval++ {
-			time.Sleep(1 * time.Second)
+		if call.District != activeCalls[call.ID].District {
+			// Update if district has been updated
+			err := notifyCallDifferences(activeCalls[call.ID], call)
+			activeCalls[call.ID] = call
+			return err
 		}
-	}
+
+		// See if there are any differences
+		if len(call.Units) != len(activeCalls[call.ID].Units) {
+			err := notifyUnitDifferences(activeCalls[call.ID], call)
+			activeCalls[call.ID] = call
+			return err
+		}
+
+		// Update last updated to keep it frosty
+		activeCalls[call.ID] = call
+
+		log.Printf("Status: %#v", call)
+		return nil
+	}, *pollInterval)
+
+}
+
+func notifyNewCall(call monitor.CallStatus) error {
+	log.Printf("notifyNewCall: %#v", call)
+	return nil
+}
+
+func notifyCallDifferences(orig monitor.CallStatus, updated monitor.CallStatus) error {
+	log.Printf("notifyCallDifferences: %#v -> %#v", orig, updated)
+	return nil
+}
+
+func notifyUnitDifferences(orig monitor.CallStatus, updated monitor.CallStatus) error {
+	log.Printf("notifyUnitDifferences: %#v -> %#v", orig, updated)
+	return nil
 }
