@@ -316,6 +316,30 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 		})
 	})
 
+	// Determine call ID from incidents grid
+	b.Dom().Find("div#ctl00_content_uxIncidentsGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
+		incidentNumber := ""
+		ori := ""
+
+		s.Find("td").Each(func(_ int, inner *goquery.Selection) {
+			cl, _ := inner.Attr("class")
+			content := inner.Find("a").Text()
+			switch cl {
+			case "Key_ORI":
+				ori = content
+				break
+			case "Key_IncidentNumber":
+				incidentNumber = content
+				break
+			default:
+			}
+		})
+
+		if ori == c.FDID {
+			ret.CallID = incidentNumber
+		}
+	})
+
 	b.Dom().Find("div#ctl00_content_uxNarrativesGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
 		var nRecordedTime time.Time
 		nMessage := ""

@@ -21,6 +21,7 @@ type Narrative struct {
 
 type CallStatus struct {
 	ID           string                `json:"id"`
+	CallID       string                `json:"call_id"`
 	CallTime     time.Time             `json:"call_time"`
 	DispatchTime time.Time             `json:"dispatch_time"`
 	ArrivalTime  time.Time             `json:"arrival_time"`

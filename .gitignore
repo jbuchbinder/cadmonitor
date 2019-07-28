@@ -1,2 +1,3 @@
 cadmonitor
-getcallinfobydate/getcallinfobydate
+cmd/getcallinfobydate/getcallinfobydate
+cmd/reportingbydate/reportingbydate
