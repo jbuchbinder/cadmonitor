@@ -1,3 +1,4 @@
 cadmonitor
 cmd/getcallinfobydate/getcallinfobydate
 cmd/reportingbydate/reportingbydate
+go.sum
