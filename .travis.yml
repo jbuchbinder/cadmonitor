@@ -3,7 +3,8 @@ go:
   - "1.15"
   - tip
 sudo: false
-script:
+before_script:
   - mv monitor/secrets.go.build monitor/secrets.go
+script:
   - go build -v
   - go test -v 
