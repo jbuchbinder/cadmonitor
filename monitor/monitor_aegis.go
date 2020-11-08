@@ -190,6 +190,8 @@ func (c *AegisMonitor) GetActiveAndUnassignedCalls() (map[string]CallStatus, err
 		return calls, ErrCadMonitorLoggedOut
 	}
 
+	// Retain raw body
+
 	//log.Printf("%s", b.Body())
 
 	b.Dom().Find("div#ctl00_content_uxCallGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
@@ -217,6 +219,7 @@ func (c *AegisMonitor) GetActiveAndUnassignedCalls() (map[string]CallStatus, err
 			if exists {
 				cs.ID = x
 				cs.LastUpdated = time.Now()
+				cs.RawHTML = b.Body()
 				calls[x] = cs
 			}
 		})
@@ -254,6 +257,9 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 	if !c.LoggedIn() {
 		return ret, ErrCadMonitorLoggedOut
 	}
+
+	// Retain raw body
+	ret.RawHTML = b.Body()
 
 	var tableSelector string
 	switch c.Protocol {
@@ -317,26 +323,26 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 	})
 
 	// Determine call ID from incidents grid
+	i := []Incident{}
 	b.Dom().Find("div#ctl00_content_uxIncidentsGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
-		incidentNumber := ""
-		ori := ""
-
+		thisi := Incident{}
 		s.Find("td").Each(func(_ int, inner *goquery.Selection) {
 			cl, _ := inner.Attr("class")
 			content := inner.Find("a").Text()
 			switch cl {
 			case "Key_ORI":
-				ori = content
+				thisi.FDID = content
 				break
 			case "Key_IncidentNumber":
-				incidentNumber = content
+				thisi.IncidentNumber = content
 				break
 			default:
 			}
 		})
+		i = append(i, thisi)
 
-		if ori == c.FDID {
-			ret.CallID = incidentNumber
+		if thisi.FDID == c.FDID {
+			ret.CallID = thisi.IncidentNumber
 		}
 	})
 
@@ -439,6 +445,8 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 	// td.Key_UnitNumber a == Unit Number (QVMEDIC)
 	// td.Key_Status a == Unit Status (DISPATCHED)
 	// td.DispatchTime a / td.Key_EnRouteTime a / td.Key_ArrivedTime a
+
+	ret.Incidents = i
 
 	// Only return the most recent time involved
 	ret.LastUpdated = latestTime

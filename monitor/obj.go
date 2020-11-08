@@ -5,6 +5,7 @@ import (
 )
 
 type UnitStatus struct {
+	CallStatusID string `json:"cs_id"`
 	Unit         string `json:"unit"`
 	Status       string `json:"status"`
 	DispatchTime string `json:"dispatch_time"`
@@ -14,9 +15,16 @@ type UnitStatus struct {
 }
 
 type Narrative struct {
+	CallStatusID string    `json:"cs_id"`
 	RecordedTime time.Time `json:"recorded_time"`
 	Message      string    `json:"message"`
 	User         string    `json:"user"`
+}
+
+type Incident struct {
+	CallStatusID   string `json:"cs_id"`
+	FDID           string `json:"fdid"`
+	IncidentNumber string `json:"incident_number"`
 }
 
 type CallStatus struct {
@@ -32,7 +40,9 @@ type CallStatus struct {
 	District     string                `json:"district"`
 	CrossStreets string                `json:"cross_streets"`
 	Priority     int                   `json:"priority"`
-	Narratives   []Narrative           `json:"narratives"`
-	Units        map[string]UnitStatus `json:"units"`
+	Incidents    []Incident            `json:"incidents" db:"-"`
+	Narratives   []Narrative           `json:"narratives" db:"-"`
+	Units        map[string]UnitStatus `json:"units" db:"-"`
 	LastUpdated  time.Time             `json:"last_updated"`
+	RawHTML      string                `json:"raw_html"`
 }

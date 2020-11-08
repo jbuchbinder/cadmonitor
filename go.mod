@@ -5,7 +5,6 @@ go 1.15
 replace github.com/jbuchbinder/cadmonitor/monitor => ./monitor
 
 require (
-	github.com/PuerkitoBio/goquery v1.5.1 // indirect
 	github.com/bitly/go-hostpool v0.1.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/headzoo/surf v1.0.0 // indirect
