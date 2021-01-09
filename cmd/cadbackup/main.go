@@ -31,7 +31,7 @@ func main() {
 	}
 	err = m.ConfigureFromValues(map[string]string{
 		"baseUrl": *baseURL,
-		//"suffix":  *suffix,
+		//"suffix":  *suffix, // -- disable to get every unit
 		"fdid": *fdid,
 	})
 	if err != nil {
