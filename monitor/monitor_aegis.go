@@ -235,7 +235,8 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 	latestTime := time.Now().Add(-10 * time.Hour)
 
 	ret := CallStatus{}
-	ret.Units = map[string]UnitStatus{}
+	ret.Units = make([]UnitStatus, 0)
+	ret.UnitStatusMap = map[string]UnitStatus{}
 	ret.Narratives = make([]Narrative, 0)
 
 	// Maintain the unique identifier
@@ -431,7 +432,7 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 			return
 		}
 
-		ret.Units[unit] = UnitStatus{
+		st := UnitStatus{
 			Unit:         unit,
 			Status:       status,
 			DispatchTime: dispatchTime,
@@ -439,6 +440,8 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 			ArrivedTime:  arrivedTime,
 			ClearedTime:  clearedTime,
 		}
+		ret.UnitStatusMap[unit] = st
+		ret.Units = append(ret.Units, st)
 	})
 
 	// div#ctl00_content_uxUnitsGrid div.Body table tbody tr

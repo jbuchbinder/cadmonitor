@@ -8,9 +8,13 @@ import (
 	"time"
 
 	"github.com/jbuchbinder/cadmonitor/monitor"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var (
+	debug       = flag.Bool("debug", false, "Enable debugging output")
 	baseURL     = flag.String("baseUrl", "http://cadview.qvec.org/", "Base URL")
 	beginDate   = flag.String("begin-date", "06/02/2019", "Begin date in MM/DD/YYYY format")
 	endDate     = flag.String("end-date", "06/02/2019", "End date in MM/DD/YYYY format")
@@ -18,12 +22,38 @@ var (
 	monitorType = flag.String("monitorType", "aegis", "Type of CAD system being monitored")
 	suffix      = flag.String("suffix", "63", "Limit units to ones having a specfic suffix")
 	dump        = flag.Bool("dump", false, "Dump results to terminal")
-	mysqlHost   = flag.String("mysql-host", "127.0.0.1", "MySQL DB Host (empty disables)")
-	mysqlDB     = flag.String("mysql-db", "cadbackup", "Name of database")
+	database    = flag.String("db", "cadbackup.db", "CAD backup database (empty disables)")
 )
 
 func main() {
 	flag.Parse()
+
+	// db initialization
+	var l logger.Interface
+	l = logger.Default.LogMode(logger.Warn)
+	if *debug {
+		l = logger.Default
+	}
+	db, err := gorm.Open(sqlite.Open(*database), &gorm.Config{Logger: l})
+	if err != nil {
+		panic(err)
+	}
+	err = db.AutoMigrate(&monitor.CallStatus{})
+	if err != nil {
+		panic(err)
+	}
+	err = db.AutoMigrate(&monitor.Incident{})
+	if err != nil {
+		panic(err)
+	}
+	err = db.AutoMigrate(&monitor.Narrative{})
+	if err != nil {
+		panic(err)
+	}
+	err = db.AutoMigrate(&monitor.UnitStatus{})
+	if err != nil {
+		panic(err)
+	}
 
 	m, err := monitor.InstantiateCadMonitor(*monitorType)
 	if err != nil {
@@ -66,8 +96,16 @@ func main() {
 	}
 
 	for k, v := range calldata {
-		log.Printf("Inserting %s / %s : %#v", k, v.ID, v)
-		//err := rethinkdb.Table(*rethinkTable).Insert(v).Exec(session)
+		if *debug {
+			log.Printf("Inserting %s / %s : %#v", k, v.ID, v)
+		} else {
+			log.Printf("Inserting %s / %s", k, v.ID)
+
+		}
+		tx := db.Create(&v)
+		if tx.Error != nil {
+			log.Printf("ERROR: %s", tx.Error)
+		}
 	}
 }
 
@@ -84,9 +122,23 @@ func fetchCallsForDate(m monitor.CadMonitor, dt string) map[string]monitor.CallS
 			panic(err)
 		}
 		// Record call data
-		//log.Printf("Recording %s", cd.CallStatus.CallID)
-		//b, _ := json.MarshalIndent(cd, "", "\t")
-		//fmt.Println(string(b))
+		log.Printf("Recording %s", cs.CallID)
+
+		// Make sure that call ID is set univerally
+		for _, v := range cs.Incidents {
+			v.CallStatusID = cs.CallID
+		}
+		for _, v := range cs.Units {
+			v.CallStatusID = cs.CallID
+		}
+		for k := range cs.Narratives {
+			cs.Narratives[k].CallStatusID = cs.CallID
+		}
+
+		if *debug {
+			b, _ := json.MarshalIndent(cs, "", "\t")
+			fmt.Println(string(b))
+		}
 		calldata[cs.CallID] = cs
 	}
 
