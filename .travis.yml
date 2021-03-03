@@ -2,9 +2,8 @@ language: go
 go:
   - "1.15"
   - tip
-sudo: false
-before_script:
-  - mv monitor/secrets.go.build monitor/secrets.go
 script:
+  - mv -v monitor/secrets.go.build monitor/secrets.go
   - go build -v
   - go test -v 
+sudo: false
