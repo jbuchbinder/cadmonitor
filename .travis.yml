@@ -2,6 +2,8 @@ language: go
 go:
   - "1.15"
   - tip
+install:
+  - true
 script:
   - mv -v monitor/secrets.go.build monitor/secrets.go
   - go build -v
