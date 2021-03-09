@@ -51,7 +51,7 @@ func main() {
 		panic(err)
 	}
 	for k, v := range calls {
-		cs, err := m.GetStatus(v)
+		cs, err := m.GetStatusFromURL(v)
 		if err != nil {
 			panic(err)
 		}

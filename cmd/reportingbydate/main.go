@@ -117,7 +117,7 @@ func fetchCallsForDate(m monitor.CadMonitor, dt string) map[string]CallData {
 		panic(err)
 	}
 	for _, v := range calls {
-		cs, err := m.GetStatus(v)
+		cs, err := m.GetStatusFromURL(v)
 		cd := CallData{CallStatus: cs}
 		if err != nil {
 			panic(err)

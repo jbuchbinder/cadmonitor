@@ -19,7 +19,9 @@ type CadMonitor interface {
 	// current calls
 	GetActiveAndUnassignedCalls() (map[string]CallStatus, error)
 	// GetStatus given an identifier retrieves a CallStatus entry that describes a call
-	GetStatus(string) (CallStatus, error)
+	GetStatus([]byte, string) (CallStatus, error)
+	// GetStatusFromURL given an identifier retrieves a CallStatus entry that describes a call
+	GetStatusFromURL(string) (CallStatus, error)
 	// GetClearedCalls retrieves a map of ids for cleared calls for a specific date
 	GetClearedCalls(string) (map[string]string, error)
 	// SetDebug determines whether debug is enabled or not

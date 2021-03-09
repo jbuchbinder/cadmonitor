@@ -32,7 +32,7 @@ func Test_AegisMonitor(t *testing.T) {
 	}
 	t.Logf("#%v", calls)
 	for k, v := range calls {
-		cs, err := m.GetStatus(v)
+		cs, err := m.GetStatusFromURL(v)
 		if err != nil {
 			t.Logf("%s : %s", k, err.Error())
 			continue

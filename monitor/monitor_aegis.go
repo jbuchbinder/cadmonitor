@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"strconv"
@@ -228,9 +229,26 @@ func (c *AegisMonitor) GetActiveAndUnassignedCalls() (map[string]CallStatus, err
 	return calls, nil
 }
 
-func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
+func (c *AegisMonitor) GetStatusFromURL(url string) (CallStatus, error) {
 	b := c.browserObject
+	err := b.Open(c.BaseURL + url)
+	if err != nil {
+		return CallStatus{}, err
+	}
+	body := b.Body()
+	if strings.Index(body, "<h2> <i>Runtime Error</i> </h2></span>") != -1 {
+		return CallStatus{}, errors.New("Error fetching call page")
+	}
 
+	// Determine if we're logged out
+	if !c.LoggedIn() {
+		return CallStatus{}, ErrCadMonitorLoggedOut
+	}
+
+	return c.GetStatus([]byte(body), url)
+}
+
+func (c *AegisMonitor) GetStatus(content []byte, id string) (CallStatus, error) {
 	// Start this an adequate amount of time back
 	latestTime := time.Now().Add(-10 * time.Hour)
 
@@ -240,27 +258,15 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 	ret.Narratives = make([]Narrative, 0)
 
 	// Maintain the unique identifier
-	ret.ID = url
+	ret.ID = id
 
-	//log.Printf("url = %s", c.BaseURL+url)
-	err := b.Open(c.BaseURL + url)
+	// Retain raw body
+	ret.RawHTML = string(content)
+
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(content))
 	if err != nil {
 		return ret, err
 	}
-
-	if strings.Index(b.Body(), "<h2> <i>Runtime Error</i> </h2></span>") != -1 {
-		return ret, errors.New("Error fetching call page")
-	}
-
-	//log.Print(b.Body())
-
-	// Determine if we're logged out
-	if !c.LoggedIn() {
-		return ret, ErrCadMonitorLoggedOut
-	}
-
-	// Retain raw body
-	ret.RawHTML = b.Body()
 
 	var tableSelector string
 	switch c.Protocol {
@@ -271,7 +277,7 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 	default:
 		tableSelector = "div#ctl00_content_uxDetailWrapper table#ctl00_content_uxCallDetail tr td div table.summary tr td"
 	}
-	b.Dom().Find(tableSelector).Each(func(_ int, s *goquery.Selection) {
+	doc.Find(tableSelector).Each(func(_ int, s *goquery.Selection) {
 		var content string
 		s.Find("span").Each(func(_ int, inner *goquery.Selection) {
 			if inner.Text() == "" {
@@ -325,7 +331,7 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 
 	// Determine call ID from incidents grid
 	i := []Incident{}
-	b.Dom().Find("div#ctl00_content_uxIncidentsGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
+	doc.Find("div#ctl00_content_uxIncidentsGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
 		thisi := Incident{}
 		s.Find("td").Each(func(_ int, inner *goquery.Selection) {
 			cl, _ := inner.Attr("class")
@@ -347,7 +353,7 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 		}
 	})
 
-	b.Dom().Find("div#ctl00_content_uxNarrativesGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
+	doc.Find("div#ctl00_content_uxNarrativesGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
 		var nRecordedTime time.Time
 		nMessage := ""
 		nUser := ""
@@ -379,7 +385,7 @@ func (c *AegisMonitor) GetStatus(url string) (CallStatus, error) {
 		})
 	})
 
-	b.Dom().Find("div#ctl00_content_uxUnitsGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
+	doc.Find("div#ctl00_content_uxUnitsGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
 		//fmt.Println("Found unit row")
 
 		unit := ""
@@ -577,7 +583,7 @@ func (c *AegisMonitor) Monitor(callback func(CallStatus) error, pollInterval int
 		for _, call := range calls {
 			if _, ok := currentCallMap[call.ID]; !ok {
 				log.Printf("Found new call URL %s", call.ID)
-				status, err := c.GetStatus(call.ID)
+				status, err := c.GetStatusFromURL(call.ID)
 				if err != nil {
 					log.Printf("Monitor: %s", err.Error())
 					continue
@@ -596,7 +602,7 @@ func (c *AegisMonitor) Monitor(callback func(CallStatus) error, pollInterval int
 			} else {
 				// Re-poll for call data
 				log.Printf("Updating call URL %s", call.ID)
-				status, err := c.GetStatus(call.ID)
+				status, err := c.GetStatusFromURL(call.ID)
 				if err != nil {
 					log.Printf("Monitor: %s", err.Error())
 					continue
