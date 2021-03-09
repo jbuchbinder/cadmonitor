@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"time"
 
 	"github.com/jbuchbinder/cadmonitor/monitor"
@@ -22,6 +24,7 @@ var (
 	monitorType = flag.String("monitorType", "aegis", "Type of CAD system being monitored")
 	suffix      = flag.String("suffix", "63", "Limit units to ones having a specfic suffix")
 	dump        = flag.Bool("dump", false, "Dump results to terminal")
+	diroutput   = flag.Bool("diroutput", false, "Directory output -- use 'database' flag to specify directory")
 	database    = flag.String("db", "cadbackup.db", "CAD backup database (empty disables)")
 )
 
@@ -34,25 +37,38 @@ func main() {
 	if *debug {
 		l = logger.Default
 	}
-	db, err := gorm.Open(sqlite.Open(*database), &gorm.Config{Logger: l})
-	if err != nil {
-		panic(err)
+
+	var db *gorm.DB
+	var err error
+
+	if !*diroutput {
+		db, err = gorm.Open(sqlite.Open(*database), &gorm.Config{Logger: l})
+		if err != nil {
+			panic(err)
+		}
+		err = db.AutoMigrate(&monitor.CallStatus{})
+		if err != nil {
+			panic(err)
+		}
+		err = db.AutoMigrate(&monitor.Incident{})
+		if err != nil {
+			panic(err)
+		}
+		err = db.AutoMigrate(&monitor.Narrative{})
+		if err != nil {
+			panic(err)
+		}
+		err = db.AutoMigrate(&monitor.UnitStatus{})
+		if err != nil {
+			panic(err)
+		}
 	}
-	err = db.AutoMigrate(&monitor.CallStatus{})
-	if err != nil {
-		panic(err)
-	}
-	err = db.AutoMigrate(&monitor.Incident{})
-	if err != nil {
-		panic(err)
-	}
-	err = db.AutoMigrate(&monitor.Narrative{})
-	if err != nil {
-		panic(err)
-	}
-	err = db.AutoMigrate(&monitor.UnitStatus{})
-	if err != nil {
-		panic(err)
+
+	if *diroutput {
+		err = os.MkdirAll(*database, 0755)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	m, err := monitor.InstantiateCadMonitor(*monitorType)
@@ -95,6 +111,10 @@ func main() {
 		fmt.Println(string(b))
 	}
 
+	if *diroutput {
+		return
+	}
+
 	for k, v := range calldata {
 		if *debug {
 			log.Printf("Inserting %s / %s : %#v", k, v.ID, v)
@@ -117,9 +137,18 @@ func fetchCallsForDate(m monitor.CadMonitor, dt string) map[string]monitor.CallS
 		panic(err)
 	}
 	for _, v := range calls {
-		cs, err := m.GetStatus(v)
+		if *diroutput {
+			cs, err := m.GetStatusFromURL(v)
+			if err != nil {
+				log.Printf("ERROR: %s", err.Error())
+				continue
+			}
+			ioutil.WriteFile(*database+string(os.PathSeparator)+cs.CallID, []byte(cs.RawHTML), 0644)
+		}
+		cs, err := m.GetStatusFromURL(v)
 		if err != nil {
-			panic(err)
+			log.Printf("ERROR: %s", err.Error())
+			continue
 		}
 		// Record call data
 		log.Printf("Recording %s", cs.CallID)
