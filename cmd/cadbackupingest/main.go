@@ -17,7 +17,6 @@ var (
 	dryrun      = flag.Bool("dryrun", false, "Run in dry mode, with no db commits")
 	fdid        = flag.String("fdid", "04042", "FDID")
 	monitorType = flag.String("monitorType", "aegis", "Type of CAD system being ingested")
-	suffix      = flag.String("suffix", "63", "Limit units to ones having a specfic suffix")
 	database    = flag.String("db", "cad:cad@/cad", "MySQL CAD backup database")
 	backupdir   = flag.String("backupdir", "backup", "Read from backup directory")
 )
@@ -66,8 +65,8 @@ func main() {
 	}
 	err = m.ConfigureFromValues(map[string]string{
 		"baseUrl": "",
-		//"suffix":  *suffix, // -- disable to get every unit
-		"fdid": *fdid,
+		"suffix":  "",
+		"fdid":    *fdid,
 	})
 	if err != nil {
 		panic(err)
@@ -89,6 +88,12 @@ func main() {
 			continue
 		}
 		status, err := m.GetStatus(contents, fullPath)
+		if err != nil {
+			log.Printf("ERROR: GetStatus(): %s", err.Error())
+			continue
+		}
+		// Override CallID to make sure that it uses a unique FDID prefix
+		//status.CallID = *fdid + "/" + dirent.Name()
 
 		if !*dryrun {
 			tx := db.Create(&status)
@@ -96,5 +101,7 @@ func main() {
 				log.Printf("ERROR: %s", tx.Error)
 			}
 		}
+
+		//return // DEBUG: TODO: FIXME: XXX
 	}
 }
