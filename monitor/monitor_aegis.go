@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
@@ -301,10 +302,22 @@ func (c *AegisMonitor) GetStatus(content []byte, id string) (CallStatus, error) 
 				}
 				break
 			case "Arrival Date/Time: ":
-				ret.ArrivalTime, _ = time.Parse("01/02/2006 15:04:05", content) // Mon Jan 2 15:04:05 -0700 MST 2006
-				if ret.ArrivalTime.After(latestTime) {
-					latestTime = ret.ArrivalTime
+				if strings.TrimSpace(content) == "" {
+					ret.ArrivalTime = sql.NullTime{Valid: false}
+					break
 				}
+				t, err := time.Parse("01/02/2006 15:04:05", content) // Mon Jan 2 15:04:05 -0700 MST 2006
+				if err != nil {
+					ret.ArrivalTime = sql.NullTime{Valid: false}
+					break
+				}
+				ret.ArrivalTime = sql.NullTime{Time: t, Valid: true}
+				if t.After(latestTime) {
+					latestTime = t
+				}
+				break
+			case "Quadrant: ":
+				ret.District = content
 				break
 			case "Caller Phone: ":
 				ret.CallerPhone = content
@@ -358,6 +371,11 @@ func (c *AegisMonitor) GetStatus(content []byte, id string) (CallStatus, error) 
 		nMessage := ""
 		nUser := ""
 
+		// Skip any narrative sections with "No data." instead of creating null entries
+		if strings.Index(s.Text(), "No data.") != -1 {
+			return
+		}
+
 		s.Find("td").Each(func(_ int, inner *goquery.Selection) {
 			cl, _ := inner.Attr("class")
 			content := inner.Find("a").Text()
@@ -378,11 +396,13 @@ func (c *AegisMonitor) GetStatus(content []byte, id string) (CallStatus, error) 
 			}
 		})
 
-		ret.Narratives = append(ret.Narratives, Narrative{
-			RecordedTime: nRecordedTime,
-			Message:      nMessage,
-			User:         nUser,
-		})
+		if nUser != "" && nMessage != "" {
+			ret.Narratives = append(ret.Narratives, Narrative{
+				RecordedTime: nRecordedTime,
+				Message:      nMessage,
+				User:         nUser,
+			})
+		}
 	})
 
 	doc.Find("div#ctl00_content_uxUnitsGrid div.Body table tbody tr").Each(func(_ int, s *goquery.Selection) {
