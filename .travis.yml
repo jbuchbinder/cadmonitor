@@ -2,10 +2,9 @@ language: go
 go:
   - "1.15"
   - tip
-install:
-  - true
 script:
   - mv -v monitor/.env.test monitor/.env
+  - go mod tidy -v
   - go build -v
   - echo go test -v 
 sudo: false
