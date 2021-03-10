@@ -3,10 +3,13 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"sync"
 	"time"
 
+	// Autoload .env files
 	"github.com/jbuchbinder/cadmonitor/monitor"
+	_ "github.com/joho/godotenv/autoload"
 )
 
 var (
@@ -37,7 +40,7 @@ func main() {
 		panic(err)
 	}
 	log.Printf("Logging into CAD interface")
-	err = cadbrowser.Login(monitor.USER, monitor.PASS)
+	err = cadbrowser.Login(os.Getenv("CADUSER"), os.Getenv("CADPASS"))
 	if err != nil {
 		panic(err)
 	}
