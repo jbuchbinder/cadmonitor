@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -278,6 +279,16 @@ func (c *AegisMonitor) GetStatus(content []byte, id string) (CallStatus, error) 
 	default:
 		tableSelector = "div#ctl00_content_uxDetailWrapper table#ctl00_content_uxCallDetail tr td div table.summary tr td"
 	}
+
+	// Use embedded form to uniquely identify by page ID, rather than using
+	// sequence numbers that will interact with each other.
+	doc.Find("form#aspnetForm").Each(func(_ int, s *goquery.Selection) {
+		action, _ := s.Attr("action")
+		if action != "" && ret.CallID == "" {
+			ret.CallID = filepath.Base(action)
+		}
+	})
+
 	doc.Find(tableSelector).Each(func(_ int, s *goquery.Selection) {
 		var content string
 		s.Find("span").Each(func(_ int, inner *goquery.Selection) {
@@ -361,7 +372,7 @@ func (c *AegisMonitor) GetStatus(content []byte, id string) (CallStatus, error) 
 		})
 		i = append(i, thisi)
 
-		if thisi.FDID == c.FDID {
+		if thisi.FDID == c.FDID && ret.CallID == "" {
 			ret.CallID = thisi.IncidentNumber
 		}
 	})
@@ -459,6 +470,7 @@ func (c *AegisMonitor) GetStatus(content []byte, id string) (CallStatus, error) 
 		}
 
 		st := UnitStatus{
+			CallStatusID: ret.CallID,
 			Unit:         unit,
 			Status:       status,
 			DispatchTime: dispatchTime,
@@ -466,6 +478,7 @@ func (c *AegisMonitor) GetStatus(content []byte, id string) (CallStatus, error) 
 			ArrivedTime:  arrivedTime,
 			ClearedTime:  clearedTime,
 		}
+		//fmt.Printf("unit = %#v", st)
 		ret.UnitStatusMap[unit] = st
 		ret.Units = append(ret.Units, st)
 	})
