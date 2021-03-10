@@ -9,8 +9,8 @@ import (
 
 type UnitStatus struct {
 	gorm.Model   `json:"-"`
-	CallStatusID string `json:"cs_id" gorm:"uniqueIndex:unit_idx,size:64"`
-	Unit         string `json:"unit" gorm:"size:32,uniqueIndex:unit_idx"`
+	CallStatusID string `json:"cs_id" gorm:"uniqueIndex:unit_idx;size:64"`
+	Unit         string `json:"unit" gorm:"size:32;uniqueIndex:unit_idx"`
 	Status       string `json:"status"`
 	DispatchTime string `json:"dispatch_time" gorm:"index"`
 	EnRouteTime  string `json:"enroute_time" gorm:"index"`
@@ -20,7 +20,7 @@ type UnitStatus struct {
 
 type Narrative struct {
 	gorm.Model   `json:"-"`
-	CallStatusID string    `json:"cs_id" gorm:"uniqueIndex:narrative_idx,size:64"`
+	CallStatusID string    `json:"cs_id" gorm:"uniqueIndex:narrative_idx;size:64"`
 	RecordedTime time.Time `json:"recorded_time" gorm:"uniqueIndex:narrative_idx"`
 	Message      string    `json:"message"`
 	User         string    `json:"user"`
@@ -28,9 +28,9 @@ type Narrative struct {
 
 type Incident struct {
 	gorm.Model     `json:"-"`
-	CallStatusID   string `json:"cs_id" gorm:"index,size:64"`
-	FDID           string `json:"fdid" gorm:"size:10,uniqueIndex:incident_fdid"`
-	IncidentNumber string `json:"incident_number" gorm:"size:32,uniqueIndex:incident_fdid"`
+	CallStatusID   string `json:"cs_id" gorm:"index;size:64"`
+	FDID           string `json:"fdid" gorm:"size:10;uniqueIndex:incident_fdid"`
+	IncidentNumber string `json:"incident_number" gorm:"size:32;uniqueIndex:incident_fdid"`
 }
 
 type CallStatus struct {
