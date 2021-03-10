@@ -1,15 +1,19 @@
 package monitor
 
 import (
+	"os"
 	"testing"
+
+	// Autoload .env files
+	_ "github.com/joho/godotenv/autoload"
 )
 
 func Test_AegisMonitor(t *testing.T) {
 	m := AegisMonitor{
-		BaseURL: "http://cadview.qvec.org/",
-		FDID:    "04042",
+		BaseURL: os.Getenv("BASEURL"),
+		FDID:    os.Getenv("FDID"),
 	}
-	err := m.Login(USER, PASS)
+	err := m.Login(os.Getenv("CADUSER"), os.Getenv("CADPASS"))
 	if err != nil {
 		t.Error(err)
 		t.Fail()

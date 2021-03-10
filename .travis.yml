@@ -5,7 +5,7 @@ go:
 install:
   - true
 script:
-  - mv -v monitor/secrets.go.build monitor/secrets.go
+  - mv -v monitor/.env.test monitor/.env
   - go build -v
   - go test -v 
 sudo: false
