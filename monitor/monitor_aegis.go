@@ -336,7 +336,7 @@ func (c *AegisMonitor) GetStatus(content []byte, id string) (CallStatus, error) 
 			case "Priority: ":
 				ret.Priority, _ = strconv.Atoi(content)
 				break
-			case "Call Type: ":
+			case "Fire Call Type: ":
 				ret.CallType = content
 				break
 			case "Nature of Call: ":
