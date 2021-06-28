@@ -83,7 +83,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = m.Login(monitor.USER, monitor.PASS)
+	err = m.Login(os.Getenv("CADUSER"), os.Getenv("CADPASS"))
 	if err != nil {
 		panic(err)
 	}
