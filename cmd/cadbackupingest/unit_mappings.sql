@@ -57,7 +57,7 @@ CREATE TABLE unit_station_mappings (
 INSERT INTO unit_station_mappings
 SELECT m.fd_id, s.unit FROM unit_mappings m
 LEFT OUTER JOIN unit_statuses s ON
-  (s.unit LIKE CONCAT('%', m.station_id) AND NOT s.unit IN ( CONCAT('RES5', m.station_id), CONCAT('RES', m.station_id), CONCAT('FAST', m.station_id), CONCAT('STA', m.station_id), CONCAT('STA5', m.station_id) ))
+  (s.unit LIKE CONCAT('%', m.station_id) AND NOT s.unit IN ( CONCAT('RES5', m.station_id), CONCAT('RES', m.station_id), CONCAT(m.station_id, 'FAST'), CONCAT(m.station_id, 'TECH'), CONCAT(m.station_id, 'PAID'), CONCAT('STA', m.station_id), CONCAT('STA5', m.station_id) ))
 GROUP BY m.fd_id, s.unit
 ORDER BY m.fd_id, s.unit;
 
