@@ -8,8 +8,7 @@ replace (
 )
 
 require (
-	github.com/jbuchbinder/cadmonitor/monitor v0.0.0-20210511195108-30492af1bd31
-	github.com/mattn/go-sqlite3 v1.14.7 // indirect
-	gorm.io/driver/sqlite v1.1.4
-	gorm.io/gorm v1.21.11
+	github.com/jbuchbinder/cadmonitor/monitor v0.0.0-20210628184336-b3eabebfc526
+	gorm.io/driver/sqlite v1.2.6
+	gorm.io/gorm v1.22.4
 )
