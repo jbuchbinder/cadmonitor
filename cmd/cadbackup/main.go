@@ -137,21 +137,17 @@ func fetchCallsForDate(m monitor.CadMonitor, dt string) map[string]monitor.CallS
 		panic(err)
 	}
 	for _, v := range calls {
-		if *diroutput {
-			cs, err := m.GetStatusFromURL(v)
-			if err != nil {
-				log.Printf("ERROR: %s", err.Error())
-				continue
-			}
-			ioutil.WriteFile(*database+string(os.PathSeparator)+cs.CallID, []byte(cs.RawHTML), 0644)
-		}
 		cs, err := m.GetStatusFromURL(v)
 		if err != nil {
 			log.Printf("ERROR: %s", err.Error())
 			continue
 		}
+		incidentNumber := lookupFdidFromIncidents(cs, *fdid)
+		if *diroutput {
+			ioutil.WriteFile(*database+string(os.PathSeparator)+incidentNumber, []byte(cs.RawHTML), 0644)
+		}
 		// Record call data
-		log.Printf("Recording %s", cs.CallID)
+		log.Printf("Recording FDID %s Incident %s (%s)", *fdid, incidentNumber, cs.CallID)
 
 		// Make sure that call ID is set univerally
 		for _, v := range cs.Incidents {
@@ -172,4 +168,13 @@ func fetchCallsForDate(m monitor.CadMonitor, dt string) map[string]monitor.CallS
 	}
 
 	return calldata
+}
+
+func lookupFdidFromIncidents(cs monitor.CallStatus, fdid string) string {
+	for _, i := range cs.Incidents {
+		if i.FDID == fdid {
+			return i.IncidentNumber
+		}
+	}
+	return ""
 }
