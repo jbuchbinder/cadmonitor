@@ -1,6 +1,6 @@
 module github.com/jbuchbinder/cadmonitor/cmd/cadbackupingest
 
-go 1.17
+go 1.18
 
 replace github.com/jbuchbinder/cadmonitor/monitor => ../../monitor
 

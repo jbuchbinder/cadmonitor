@@ -1,6 +1,6 @@
 module github.com/jbuchbinder/cadmonitor/cmd/reportingbydate
 
-go 1.16
+go 1.18
 
 replace github.com/jbuchbinder/cadmonitor/monitor => ../../monitor
 
