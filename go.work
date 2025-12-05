@@ -1,0 +1,10 @@
+go 1.25.4
+
+use (
+	.
+	./cmd/cadbackup
+	./cmd/cadbackupingest
+	./cmd/getcallinfobydate
+	./cmd/reportingbydate
+	./monitor
+)
